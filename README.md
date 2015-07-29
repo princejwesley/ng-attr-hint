@@ -1,6 +1,8 @@
 # ng-attr-hint
-A tiny node plugin for static angular directive hints
+
 [![npm version](https://badge.fury.io/js/ng-attr-hint.svg)](http://badge.fury.io/js/ng-attr-hint)
+
+A tiny node plugin for static angular directive hints
 
 ##Usage
 
@@ -35,4 +37,5 @@ Install from npm
 ```
 ###Integration
 grunt - TODO
+
 gulp - TODO
