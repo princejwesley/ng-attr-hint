@@ -1,6 +1,6 @@
 {
   "name": "ng-attr-hint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "prince john wesley <princejohnwesley@gmail.com>",
   "description": "A tiny node plugin for static angular directive hints",
   "license": "MIT",

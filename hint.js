@@ -1,3 +1,8 @@
+/*!The MIT License (MIT)
+
+Copyright (c) 2015 Prince John Wesley (princejohnwesley@gmail.com)
+**/
+
 (function() {
   'use strict';
 
