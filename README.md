@@ -14,12 +14,21 @@ Install from npm
 
 	var ngAttrHint = require('ng-attr-hint');
 
+	// callback
 	ngAttrHint({
 		files: ['./angular-directive.html']
 	}, function(err, res) {
-
 		if(err) console.error(err);
 		else console.log(res)
+	});
+
+	// promise
+	ngAttrHint({
+		files: ['./angular-directive.html']
+	}).then(function(data) {
+		console.log(data)
+	}, function(err) {
+		console.error(err)
 	});
 
 ```
@@ -39,3 +48,8 @@ Install from npm
 grunt - TODO
 
 gulp - TODO
+
+## License
+This plugin is licensed under the [MIT license](https://github.com/princejwesley/ng-attr-hint/blob/master/LICENSE).
+
+Copyright (c) 2015 [Prince John Wesley](http://www.toolitup.com)

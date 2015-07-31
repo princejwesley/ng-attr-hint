@@ -1,6 +1,6 @@
 {
   "name": "ng-attr-hint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "prince john wesley <princejohnwesley@gmail.com>",
   "description": "A tiny node plugin for static angular directive hints",
   "license": "MIT",
@@ -14,9 +14,13 @@
     "url": "https://github.com/princejwesley/ng-attr-hint.git"
   },
   "dependencies": {
+    "htmlparser2": "~3.8.3",
     "lodash": "~3.10.0",
-    "promise": "~7.0.3",
-    "htmlparser2": "~3.8.3"
+    "q": "^1.4.1",
+    "through2": "^2.0.0"
   },
-  "keywords": ["angular-hint", "angular-directive"]
+  "keywords": [
+    "angular-hint",
+    "angular-directive"
+  ]
 }
