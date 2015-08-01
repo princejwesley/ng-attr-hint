@@ -14,10 +14,14 @@ var through2 = require('through2');
 var mutuallyExclusives = [
   ['ng-show', 'ng-hide'],
   ['ng-bind', 'ng-bind-html', 'ng-bind-template'],
+];
+
+var complementaryTags = [
   ['href', 'ng-href'],
   ['pattern', 'ng-pattern'],
   ['required', 'ng-required'],
-  ['src', 'ng-src']
+  ['src', 'ng-src'],
+  ['readonly', 'ng-readonly']
 ];
 
 var emptyAttributes = ['ng-cloak', 'ng-transclude'];
@@ -31,20 +35,29 @@ var NG_OPTIONS_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+group\s+by\s
 
 var RULE = {};
 
-RULE.MUTUALLY_EXCLUSIVES = function(attrsInfo, result) {
+RULE.$INTERSECTIONS = function(attrsInfo, tagList, msg, result) {
   var keys = attrsInfo.attrKeys;
-  // mutually exclusives
-  _.each(mutuallyExclusives, function(me) {
-    var common = _.intersection(me, keys);
+  _.each(tagList, function(tags) {
+    var common = _.intersection(tags, keys);
     if (common.length > 1) {
       result.push({
         location: attrsInfo.attrs.__loc__,
         type: 'error',
         attrs: common,
-        message: 'Mutually exclusive attributes ' + common.join(', ')
+        message: msg + common.join(', ')
       });
     }
   });
+};
+
+Object.defineProperty(RULE, '$INTERSECTIONS', { enumerable: false });
+
+RULE.MUTUALLY_EXCLUSIVES = function(attrsInfo, result) {
+  RULE.$INTERSECTIONS(attrsInfo, mutuallyExclusives, 'Mutually exclusive directives ', result);
+};
+
+RULE.COMPLEMENTARY_TAGS = function(attrsInfo, result) {
+  RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives ', result);
 };
 
 
@@ -116,7 +129,7 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
   } else {
     var m1 = match[1];
     var aliasAs = match[3];
-    
+
     if(!(match = m1.match(/^(?:(\s*[\$\w]+)|\(\s*([\$\w]+)\s*,\s*([\$\w]+)\s*\))$/))) {
       result.push({
         location: attrsInfo.attrs.__loc__,
@@ -136,9 +149,6 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
       });
     }
   }
-
-
-
 };
 
 
@@ -172,7 +182,7 @@ RULE.NG_OPTIONS = function(attrsInfo, result) {
 };
 
 
-RULE.NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
+RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   var attrs = attrsInfo.attrs;
   if (!(attrName in attrs)) return;
 
@@ -198,14 +208,14 @@ RULE.NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   }
 };
 
-Object.defineProperty(RULE, 'NG_OPEN_EVEN_ODD', { enumerable: false });
+Object.defineProperty(RULE, '$NG_OPEN_EVEN_ODD', { enumerable: false });
 
 RULE.NG_OPEN_EVEN = function(attrsInfo, result) {
-  RULE.NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-even', result);
+  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-even', result);
 };
 
 RULE.NG_OPEN_ODD = function(attrsInfo, result) {
-  RULE.NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-odd', result);
+  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-odd', result);
 };
 
 
