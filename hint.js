@@ -136,6 +136,42 @@ RULE.NG_OPTIONS = function(attrsInfo, result) {
 };
 
 
+RULE.NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
+  var attrs = attrsInfo.attrs;
+  if (!(attrName in attrs)) return;
+
+  var value = attrs[attrName] || '';
+  var node = attrsInfo.node;
+  var hasNgRepeat = false;
+
+  while(node.parent) {
+    if('ng-repeat' in node.data.attrs) {
+      hasNgRepeat = true;
+      break;
+    }
+    node = node.parent;
+  }
+
+  if(!hasNgRepeat) {
+    result.push({
+      location: attrsInfo.attrs.__loc__,
+      type: 'error',
+      attrs: attrName,
+      message: "work in conjunction with ngRepeat and take effect only on odd (even) rows"
+    });
+  }
+};
+
+Object.defineProperty(RULE, 'NG_OPEN_EVEN_ODD', { enumerable: false });
+
+RULE.NG_OPEN_EVEN = function(attrsInfo, result) {
+  RULE.NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-even', result);
+};
+
+RULE.NG_OPEN_ODD = function(attrsInfo, result) {
+  RULE.NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-odd', result);
+};
+
 
 RULE.EMPTY_NG = function(attrsInfo, result) {
   _.each(attrsInfo.attrKeys, function(key) {
@@ -178,14 +214,25 @@ var parse = function(settings, content) {
   var deferred = Q.defer();
   var attrs = {},
     dups = {};
+  var tree = {};
+  var root = tree;
   var p = new htmlParser.Parser({
     onopentag: function(name, attributes) {
+      var child = {
+        data: { name: name, attrs: attributes },
+        parent: root
+      };
+      root.children = root.children ? root.children : [];
+      root.children.push(child);
+      root = root.children[root.children.length - 1];
+
       var attrsInfo = {
         tagName: name,
         attrs: attributes,
         dups: dups,
         attrKeys: _.keys(attributes),
-        settings: settings
+        settings: settings,
+        node: child
       };
 
       _.each(RULES, function(rule) {
@@ -195,13 +242,16 @@ var parse = function(settings, content) {
       attrs = {};
       dups = {};
     },
+    onclosetag: function(name) {
+      if(root.parent) root = root.parent;
+    },
     onattribute: function(name, value) {
       (name in attrs ? dups : attrs)[name] = value;
     },
     onend: function() {
       deferred.resolve(result);
     }
-  });
+  }, { lowerCaseTags: true });
   p.write(content);
   p.end();
   return deferred.promise;
