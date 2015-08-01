@@ -12,23 +12,50 @@ var htmlParser = require('htmlparser2');
 var through2 = require('through2');
 
 var mutuallyExclusives = [
-  ['ng-show', 'ng-hide'],
-  ['ng-bind', 'ng-bind-html', 'ng-bind-template'],
+  ['ngShow', 'ngHide'],
+  ['ngBind', 'ngBindHtml', 'ngBindTemplate'],
 ];
 
 var complementaryTags = [
-  ['href', 'ng-href'],
-  ['pattern', 'ng-pattern'],
-  ['required', 'ng-required'],
-  ['src', 'ng-src'],
-  ['readonly', 'ng-readonly']
+  ['href', 'ngHref'],
+  ['required', 'ngRequired'],
+  ['src', 'ngSrc'],
+  ['readonly', 'ngReadonly'],
 ];
 
-var emptyAttributes = ['ng-cloak', 'ng-transclude'];
+var aliasTags = [
+  ['minlength', 'ngMinlength'],
+  ['maxlength', 'ngMaxlength'],
+  ['min', 'ngMin'],
+  ['max', 'ngMax'],
+  ['pattern', 'ngPattern'],
+];
+
+var emptyAttributes = ['ngCloak', 'ngTransclude'];
 
 //https://github.com/angular/angular.js/blob/master/src/ng/directive/ngOptions.js#L218
 //                     //00001111111111000000000002222222222000000000000000000000333333333300000000000000000000000004444444444400000000000005555555555555550000000006666666666666660000000777777777777777000000000000000888888888800000000000000000009999999999
 var NG_OPTIONS_REGEXP = /^\s*([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+group\s+by\s+([\s\S]+?))?(?:\s+disable\s+when\s+([\s\S]+?))?\s+for\s+(?:([\$\w][\$\w]*)|(?:\(\s*([\$\w][\$\w]*)\s*,\s*([\$\w][\$\w]*)\s*\)))\s+in\s+([\s\S]+?)(?:\s+track\s+by\s+([\s\S]+?))?$/;
+
+//https://github.com/angular/angular.js/blob/9efb0d5ee961b57c8fc144a3138a15955e4010e2/src/jqLite.js#L136
+var SPECIAL_CHARS_REGEXP = /([\:\-\_]+(.))/g;
+var MOZ_HACK_REGEXP = /^moz([A-Z])/;
+
+function camelCase(name) {
+  return name.
+    replace(SPECIAL_CHARS_REGEXP, function(_, separator, letter, offset) {
+      return offset ? letter.toUpperCase() : letter;
+    }).
+    replace(MOZ_HACK_REGEXP, 'Moz$1');
+}
+
+//https://github.com/angular/angular.js/blob/6f3b8622adce2006df5cf7eed4bf9262539004bd/src/ng/compile.js#L2661
+var PREFIX_REGEXP = /^((?:x|data)[\:\-_])/i;
+
+function directiveNormalize(name) {
+  return camelCase(name.replace(PREFIX_REGEXP, ''));
+}
+
 
 
 // rules
@@ -41,7 +68,7 @@ RULE.$INTERSECTIONS = function(attrsInfo, tagList, msg, result) {
     var common = _.intersection(tags, keys);
     if (common.length > 1) {
       result.push({
-        location: attrsInfo.attrs.__loc__,
+        location: attrsInfo.attributes.__loc__,
         type: 'error',
         attrs: common,
         message: msg + common.join(', ')
@@ -60,6 +87,9 @@ RULE.COMPLEMENTARY_TAGS = function(attrsInfo, result) {
   RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives ', result);
 };
 
+RULE.ALIAS_TAGS = function(attrsInfo, result) {
+  RULE.$INTERSECTIONS(attrsInfo, aliasTags, 'Alias directives ', result);
+};
 
 RULE.DUPLICATES = function(attrsInfo, result) {
   // duplicates
@@ -67,7 +97,7 @@ RULE.DUPLICATES = function(attrsInfo, result) {
     .keys()
     .each(function(dup) {
       result.push({
-        location: attrsInfo.attrs.__loc__,
+        location: attrsInfo.attributes.__loc__,
         type: 'error',
         attrs: [dup],
         message: 'Duplicate attribute ' + dup
@@ -79,51 +109,50 @@ RULE.DUPLICATES = function(attrsInfo, result) {
 
 RULE.NG_TRIM = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
-  if (!('ng-trim' in attrs) || attrsInfo.tagName !== 'input' || attrs.type !== 'password') return;
+  if (!('ngTrim' in attrs) || attrsInfo.tagName !== 'input' || attrs.type !== 'password') return;
 
   result.push({
-    location: attrsInfo.attrs.__loc__,
+    location: attrsInfo.attributes.__loc__,
     type: 'warning',
-    attrs: 'ng-trim',
+    attrs: 'ngTrim',
     message: "ng-trim parameter is ignored for input[type=password] controls, which will never trim the input"
   });
 };
 
 RULE.NG_INIT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
-  if (('ng-repeat' in attrs) || !('ng-init' in attrs)) return;
+  if (('ngRepeat' in attrs) || !('ngInit' in attrs)) return;
 
   result.push({
-    location: attrsInfo.attrs.__loc__,
+    location: attrsInfo.attributes.__loc__,
     type: 'warning',
-    attrs: 'ng-init',
+    attrs: 'ngInit',
     message: "The only appropriate use of ngInit is for aliasing special properties of ngRepeat, as seen in the demo below. Besides this case, you should use controllers rather than ngInit to initialize values on a scope."
   });
 };
 
 RULE.NG_REPEAT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
-  if (!('ng-repeat' in attrs)) return;
+  if (!('ngRepeat' in attrs)) return;
 
-  var value = attrs['ng-repeat'], trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
+  var value = attrs['ngRepeat'], trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
 
   if (trimFunValue.match(/\strack\s+by\s+(?:[\S]+)\s+(?:[\S]+)/)) {
     result.push({
-      location: attrsInfo.attrs.__loc__,
+      location: attrsInfo.attributes.__loc__,
       type: 'error',
-      attrs: 'ng-repeat',
+      attrs: 'ngRepeat',
       message: "track by must always be the last expression"
     });
   }
 
   var match;
-  // Taken from angular repo
   // https://github.com/angular/angular.js/blob/master/src/ng/directive/ngRepeat.js#L338
   if(!(match = value.match(/^\s*([\s\S]+?)\s+in\s+([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+track\s+by\s+([\s\S]+?))?\s*$/))) {
     result.push({
-      location: attrsInfo.attrs.__loc__,
+      location: attrsInfo.attributes.__loc__,
       type: 'error',
-      attrs: 'ng-repeat',
+      attrs: 'ngRepeat',
       message: ["Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '", value, "'."].join('')
     });
   } else {
@@ -132,9 +161,9 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
 
     if(!(match = m1.match(/^(?:(\s*[\$\w]+)|\(\s*([\$\w]+)\s*,\s*([\$\w]+)\s*\))$/))) {
       result.push({
-        location: attrsInfo.attrs.__loc__,
+        location: attrsInfo.attributes.__loc__,
         type: 'error',
-        attrs: 'ng-repeat',
+        attrs: 'ngRepeat',
         message: ["'_item_' in '_item_ in _collection_' should be an identifier or '(_key_, _value_)' expression, but got '", m1, "'."].join('')
       });
     }
@@ -142,9 +171,9 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
     if (aliasAs && (!/^[$a-zA-Z_][$a-zA-Z0-9_]*$/.test(aliasAs) ||
         /^(null|undefined|this|\$index|\$first|\$middle|\$last|\$even|\$odd|\$parent|\$root|\$id)$/.test(aliasAs))) {
       result.push({
-        location: attrsInfo.attrs.__loc__,
+        location: attrsInfo.attributes.__loc__,
         type: 'error',
-        attrs: 'ng-repeat',
+        attrs: 'ngRepeat',
         message: ["alias '", aliasAs, "' is invalid --- must be a valid JS identifier which is not a reserved name."].join('')
       });
     }
@@ -154,17 +183,17 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
 
 RULE.NG_OPTIONS = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
-  if (!('ng-options' in attrs)) return;
+  if (!('ngOptions' in attrs)) return;
 
-  var options = attrs['ng-options'];
+  var options = attrs['ngOptions'];
 
   if (!options) return;
 
   if (!options.match(NG_OPTIONS_REGEXP)) {
     result.push({
-      location: attrsInfo.attrs.__loc__,
+      location: attrsInfo.attributes.__loc__,
       type: 'error',
-      attrs: 'ng-options',
+      attrs: 'ngOptions',
       message: ["Expected expression in form of '_select_ (as _label_)? for (_key_,)?_value_ in _collection_' but got '",
         options, "'. Element: '<", attrsInfo.tagName, ">'"
       ].join('')
@@ -173,9 +202,9 @@ RULE.NG_OPTIONS = function(attrsInfo, result) {
 
   if (options.match(/\s+as\s+(.*?)\strack\s+by\s/)) {
     result.push({
-      location: attrsInfo.attrs.__loc__,
+      location: attrsInfo.attributes.__loc__,
       type: 'error',
-      attrs: 'ng-options',
+      attrs: 'ngOptions',
       message: "Do not use select as and track by in the same expression. They are not designed to work together."
     });
   }
@@ -191,7 +220,7 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   var hasNgRepeat = false;
 
   while(node.parent) {
-    if('ng-repeat' in node.data.attrs) {
+    if('ngRepeat' in node.data.attrs) {
       hasNgRepeat = true;
       break;
     }
@@ -200,7 +229,7 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
 
   if(!hasNgRepeat) {
     result.push({
-      location: attrsInfo.attrs.__loc__,
+      location: attrsInfo.attributes.__loc__,
       type: 'error',
       attrs: attrName,
       message: "work in conjunction with ngRepeat and take effect only on odd (even) rows"
@@ -211,11 +240,11 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
 Object.defineProperty(RULE, '$NG_OPEN_EVEN_ODD', { enumerable: false });
 
 RULE.NG_OPEN_EVEN = function(attrsInfo, result) {
-  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-even', result);
+  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ngClassEven', result);
 };
 
 RULE.NG_OPEN_ODD = function(attrsInfo, result) {
-  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ng-class-odd', result);
+  RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ngClassOdd', result);
 };
 
 
@@ -223,11 +252,11 @@ RULE.EMPTY_NG = function(attrsInfo, result) {
   _.each(attrsInfo.attrKeys, function(key) {
     // empty ng attributes
     if (_.isEmpty(attrsInfo.attrs[key]) &&
-      _.startsWith(key, 'ng-') &&
+      _.startsWith(key, 'ng') &&
       emptyAttributes.indexOf(key) === -1 &&
       attrsInfo.settings.ignoreAttributes.indexOf(key) === -1) {
       result.push({
-        location: attrsInfo.attrs.__loc__,
+        location: attrsInfo.attributes.__loc__,
         type: 'warning',
         attrs: [key],
         message: 'Empty attribute ' + key
@@ -265,7 +294,7 @@ var parse = function(settings, content) {
   var p = new htmlParser.Parser({
     onopentag: function(name, attributes) {
       var child = {
-        data: { name: name, attrs: attributes },
+        data: { name: name, attrs: attrs },
         parent: root
       };
       root.children = root.children ? root.children : [];
@@ -274,9 +303,12 @@ var parse = function(settings, content) {
 
       var attrsInfo = {
         tagName: name,
-        attrs: attributes,
+        // normalized
+        attrs: attrs,
+        // original
+        attributes: attributes,
         dups: dups,
-        attrKeys: _.keys(attributes),
+        attrKeys: _.keys(attrs),
         settings: settings,
         node: child
       };
@@ -292,7 +324,12 @@ var parse = function(settings, content) {
       if(root.parent) root = root.parent;
     },
     onattribute: function(name, value) {
-      (name in attrs ? dups : attrs)[name] = value;
+      if(name === '__loc__') return;
+
+      var normalizedName = directiveNormalize(name);
+
+      if(normalizedName in attrs) dups[normalizedName] = value;
+      else attrs[normalizedName] = value;
     },
     onend: function() {
       deferred.resolve(result);
