@@ -56,6 +56,18 @@ function directiveNormalize(name) {
   return camelCase(name.replace(PREFIX_REGEXP, ''));
 }
 
+// helper
+
+function pushResults(location, type, attr, message, result) {
+  var loc = location.split(':');
+  result.push({
+    file: loc[0],
+    line: parseInt(loc[1]),
+    type: type,
+    attrs: attr,
+    message: message
+  });
+}
 
 
 // rules
@@ -67,12 +79,7 @@ RULE.$INTERSECTIONS = function(attrsInfo, tagList, msg, result) {
   _.each(tagList, function(tags) {
     var common = _.intersection(tags, keys);
     if (common.length > 1) {
-      result.push({
-        location: attrsInfo.attributes.__loc__,
-        type: 'error',
-        attrs: common,
-        message: msg + common.join(', ')
-      });
+      pushResults(attrsInfo.attributes.__loc__, 'warning', common, msg + common.join(', '), result);
     }
   });
 };
@@ -96,12 +103,7 @@ RULE.DUPLICATES = function(attrsInfo, result) {
   _(attrsInfo.dups)
     .keys()
     .each(function(dup) {
-      result.push({
-        location: attrsInfo.attributes.__loc__,
-        type: 'error',
-        attrs: [dup],
-        message: 'Duplicate attribute ' + dup
-      });
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [dup], 'Duplicate attribute ' + dup, result);
     })
     .value();
 };
@@ -111,24 +113,17 @@ RULE.NG_TRIM = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   if (!('ngTrim' in attrs) || attrsInfo.tagName !== 'input' || attrs.type !== 'password') return;
 
-  result.push({
-    location: attrsInfo.attributes.__loc__,
-    type: 'warning',
-    attrs: 'ngTrim',
-    message: "ng-trim parameter is ignored for input[type=password] controls, which will never trim the input"
-  });
+  pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngTrim'],
+    "ng-trim parameter is ignored for input[type=password] controls, which will never trim the input", result);
 };
 
 RULE.NG_INIT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   if (('ngRepeat' in attrs) || !('ngInit' in attrs)) return;
 
-  result.push({
-    location: attrsInfo.attributes.__loc__,
-    type: 'warning',
-    attrs: 'ngInit',
-    message: "The only appropriate use of ngInit is for aliasing special properties of ngRepeat, as seen in the demo below. Besides this case, you should use controllers rather than ngInit to initialize values on a scope."
-  });
+  pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngInit'],
+    "The only appropriate use of ngInit is for aliasing special properties of ngRepeat, as seen in the demo below. Besides this case, you should use controllers rather than ngInit to initialize values on a scope.",
+    result);
 };
 
 RULE.NG_REPEAT = function(attrsInfo, result) {
@@ -138,44 +133,27 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
   var value = attrs['ngRepeat'], trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
 
   if (trimFunValue.match(/\strack\s+by\s+(?:[\S]+)\s+(?:[\S]+)/)) {
-    result.push({
-      location: attrsInfo.attributes.__loc__,
-      type: 'error',
-      attrs: 'ngRepeat',
-      message: "track by must always be the last expression"
-    });
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'], "track by must always be the last expression", result);
   }
 
   var match;
   // https://github.com/angular/angular.js/blob/master/src/ng/directive/ngRepeat.js#L338
   if(!(match = value.match(/^\s*([\s\S]+?)\s+in\s+([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+track\s+by\s+([\s\S]+?))?\s*$/))) {
-    result.push({
-      location: attrsInfo.attributes.__loc__,
-      type: 'error',
-      attrs: 'ngRepeat',
-      message: ["Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '", value, "'."].join('')
-    });
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'],
+      ["Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '", value, "'."].join(''), result);
   } else {
     var m1 = match[1];
     var aliasAs = match[3];
 
     if(!(match = m1.match(/^(?:(\s*[\$\w]+)|\(\s*([\$\w]+)\s*,\s*([\$\w]+)\s*\))$/))) {
-      result.push({
-        location: attrsInfo.attributes.__loc__,
-        type: 'error',
-        attrs: 'ngRepeat',
-        message: ["'_item_' in '_item_ in _collection_' should be an identifier or '(_key_, _value_)' expression, but got '", m1, "'."].join('')
-      });
+      pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'], 
+        ["'_item_' in '_item_ in _collection_' should be an identifier or '(_key_, _value_)' expression, but got '", m1, "'."].join(''), result);
     }
 
     if (aliasAs && (!/^[$a-zA-Z_][$a-zA-Z0-9_]*$/.test(aliasAs) ||
         /^(null|undefined|this|\$index|\$first|\$middle|\$last|\$even|\$odd|\$parent|\$root|\$id)$/.test(aliasAs))) {
-      result.push({
-        location: attrsInfo.attributes.__loc__,
-        type: 'error',
-        attrs: 'ngRepeat',
-        message: ["alias '", aliasAs, "' is invalid --- must be a valid JS identifier which is not a reserved name."].join('')
-      });
+      pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'],
+        ["alias '", aliasAs, "' is invalid --- must be a valid JS identifier which is not a reserved name."].join(''), result);
     }
   }
 };
@@ -190,23 +168,15 @@ RULE.NG_OPTIONS = function(attrsInfo, result) {
   if (!options) return;
 
   if (!options.match(NG_OPTIONS_REGEXP)) {
-    result.push({
-      location: attrsInfo.attributes.__loc__,
-      type: 'error',
-      attrs: 'ngOptions',
-      message: ["Expected expression in form of '_select_ (as _label_)? for (_key_,)?_value_ in _collection_' but got '",
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngOptions'], 
+      ["Expected expression in form of '_select_ (as _label_)? for (_key_,)?_value_ in _collection_' but got '",
         options, "'. Element: '<", attrsInfo.tagName, ">'"
-      ].join('')
-    });
+      ].join(''), result);
   }
 
   if (options.match(/\s+as\s+(.*?)\strack\s+by\s/)) {
-    result.push({
-      location: attrsInfo.attributes.__loc__,
-      type: 'error',
-      attrs: 'ngOptions',
-      message: "Do not use select as and track by in the same expression. They are not designed to work together."
-    });
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngOptions'],
+      "Do not use select as and track by in the same expression. They are not designed to work together.", result);
   }
 };
 
@@ -228,12 +198,8 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   }
 
   if(!hasNgRepeat) {
-    result.push({
-      location: attrsInfo.attributes.__loc__,
-      type: 'error',
-      attrs: attrName,
-      message: "work in conjunction with ngRepeat and take effect only on odd (even) rows"
-    });
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [attrName],
+      "work in conjunction with ngRepeat and take effect only on odd (even) rows", result);
   }
 };
 
@@ -255,12 +221,7 @@ RULE.EMPTY_NG = function(attrsInfo, result) {
       _.startsWith(key, 'ng') &&
       emptyAttributes.indexOf(key) === -1 &&
       attrsInfo.settings.ignoreAttributes.indexOf(key) === -1) {
-      result.push({
-        location: attrsInfo.attributes.__loc__,
-        type: 'warning',
-        attrs: [key],
-        message: 'Empty attribute ' + key
-      });
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [key], 'Empty attribute ' + key, result);
     }
   });
 
