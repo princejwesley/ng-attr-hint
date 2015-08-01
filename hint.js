@@ -92,10 +92,9 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   if (!('ng-repeat' in attrs)) return;
 
-  var value = attrs['ng-repeat'];
-  value = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
+  var value = attrs['ng-repeat'], trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
 
-  if (value.match(/\strack\s+by\s+(?:[\S]+)\s+(?:[\S]+)/)) {
+  if (trimFunValue.match(/\strack\s+by\s+(?:[\S]+)\s+(?:[\S]+)/)) {
     result.push({
       location: attrsInfo.attrs.__loc__,
       type: 'error',
@@ -103,6 +102,43 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
       message: "track by must always be the last expression"
     });
   }
+
+  var match;
+  // Taken from angular repo
+  // https://github.com/angular/angular.js/blob/master/src/ng/directive/ngRepeat.js#L338
+  if(!(match = value.match(/^\s*([\s\S]+?)\s+in\s+([\s\S]+?)(?:\s+as\s+([\s\S]+?))?(?:\s+track\s+by\s+([\s\S]+?))?\s*$/))) {
+    result.push({
+      location: attrsInfo.attrs.__loc__,
+      type: 'error',
+      attrs: 'ng-repeat',
+      message: ["Expected expression in form of '_item_ in _collection_[ track by _id_]' but got '", value, "'."].join('')
+    });
+  } else {
+    var m1 = match[1];
+    var aliasAs = match[3];
+    
+    if(!(match = m1.match(/^(?:(\s*[\$\w]+)|\(\s*([\$\w]+)\s*,\s*([\$\w]+)\s*\))$/))) {
+      result.push({
+        location: attrsInfo.attrs.__loc__,
+        type: 'error',
+        attrs: 'ng-repeat',
+        message: ["'_item_' in '_item_ in _collection_' should be an identifier or '(_key_, _value_)' expression, but got '", m1, "'."].join('')
+      });
+    }
+
+    if (aliasAs && (!/^[$a-zA-Z_][$a-zA-Z0-9_]*$/.test(aliasAs) ||
+        /^(null|undefined|this|\$index|\$first|\$middle|\$last|\$even|\$odd|\$parent|\$root|\$id)$/.test(aliasAs))) {
+      result.push({
+        location: attrsInfo.attrs.__loc__,
+        type: 'error',
+        attrs: 'ng-repeat',
+        message: ["alias '", aliasAs, "' is invalid --- must be a valid JS identifier which is not a reserved name."].join('')
+      });
+    }
+  }
+
+
+
 };
 
 
