@@ -10,10 +10,12 @@ var _ = require('lodash');
 var fs = require('fs');
 var htmlParser = require('htmlparser2');
 var through2 = require('through2');
+var levenshtein = require('fast-levenshtein');
 
 var mutuallyExclusives = [
   ['ngShow', 'ngHide'],
   ['ngBind', 'ngBindHtml', 'ngBindTemplate'],
+  ['ng-switch-when', 'ng-switch-default']
 ];
 
 var complementaryTags = [
@@ -21,6 +23,19 @@ var complementaryTags = [
   ['required', 'ngRequired'],
   ['src', 'ngSrc'],
   ['readonly', 'ngReadonly'],
+  ['onchange', 'ngChange'],
+  ['onfocus', 'ngFocus'],
+  ['onclick', 'ngClick'],
+  ['onkeydown', 'ngKeydown'],
+  ['onkeyup', 'ngKeyup'],
+  ['onkeypress', 'ngKeypress'],
+  ['onmousedown', 'ngMousedown'],
+  ['onmouseenter', 'ngMouseenter'],
+  ['onmouseleave', 'ngMouseleave'],
+  ['onmouseup', 'ngMouseup'],
+  ['onmouseover', 'ngMouseover'],
+  ['onsubmit', 'ngSubmit'],
+  ['ondblclick', 'ngDblclick'],
 ];
 
 var aliasTags = [
@@ -32,6 +47,41 @@ var aliasTags = [
 ];
 
 var emptyAttributes = ['ngCloak', 'ngTransclude'];
+
+var html2NgAttributes = {
+  'onchange': 'ngChange',
+  'onfocus': 'ngFocus',
+  'onclick': 'ngClick',
+  'onkeydown': 'ngKeydown',
+  'onkeyup': 'ngKeyup',
+  'onkeypress': 'ngKeypress',
+  'onmousedown': 'ngMousedown',
+  'onmouseenter': 'ngMouseenter',
+  'onmouseleave': 'ngMouseleave',
+  'onmouseup': 'ngMouseup',
+  'onmouseover': 'ngMouseover',
+  'onsubmit': 'ngSubmit',
+  'ondblclick': 'ngDblclick',
+};
+
+var deprecatedAttributes = { 
+  'ngBindHtmlUnsafe' : 'ng-bind-html'
+};
+
+//denormalized form
+var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bindhtml', 'ng-bindtemplate', 'ng-blur', 'ng-change', 'ng-checked',
+  'ng-class', 'ng-classeven', 'ng-classodd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
+  'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
+  'ng-focus', 'ng-form', 'ng-hide', 'ng-hint', 'ng-hint-exclude', 'ng-hint-include', 'ng-href', 'ng-if',
+  'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength','ng-minlength',
+  'ng-model', 'ng-model-options', 'ng-mousedown', 'ng-mouseenter', 'ng-mouseleave', 'ng-mousemove',
+  'ng-mouseover', 'ng-mouseup', 'ng-nonbindable', 'ng-open', 'ng-options', 'ng-paste', 'ng-pattern',
+  'ng-pluralize', 'ng-pristine', 'ng-readonly', 'ng-repeat', 'ng-repeat-start', 'ng-repeat-end',
+  'ng-required', 'ng-selected', 'ng-show', 'ng-src', 'ng-srcset', 'ng-style', 'ng-submit', 'ng-switch',
+  'ng-switch-default', 'ng-switch-when', 'ng-transclude', 'ng-true-value', 'ng-trim', 'ng-false-value',
+  'ng-value', 'ng-valid', 'ng-view',
+];
+
 
 //https://github.com/angular/angular.js/blob/master/src/ng/directive/ngOptions.js#L218
 //                     //00001111111111000000000002222222222000000000000000000000333333333300000000000000000000000004444444444400000000000005555555555555550000000006666666666666660000000777777777777777000000000000000888888888800000000000000000009999999999
@@ -85,11 +135,21 @@ RULE.$INTERSECTIONS = function(attrsInfo, tagList, msg, result) {
 };
 
 RULE.MUTUALLY_EXCLUSIVES = function(attrsInfo, result) {
-  RULE.$INTERSECTIONS(attrsInfo, mutuallyExclusives, 'Mutually exclusive directives ', result);
+  RULE.$INTERSECTIONS(attrsInfo, mutuallyExclusives, 'Mutually exclusive directives: ', result);
 };
 
 RULE.COMPLEMENTARY_TAGS = function(attrsInfo, result) {
-  RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives ', result);
+  RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives, Use ng-* attribute. Got: ', result);
+};
+
+RULE.DEPRECATED = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  _.each(_.keys(deprecatedAttributes), function(deprecate) {
+    if(deprecate in attrs) {
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [deprecate], 
+        ["Deprecated directive '", deprecate, "'. Use '", deprecatedAttributes[deprecate] ,"'"].join(''), result);      
+    }
+  });
 };
 
 RULE.ALIAS_TAGS = function(attrsInfo, result) {
@@ -248,9 +308,18 @@ RULE.$NG_ATTR = function(attrKey, attrsInfo, result) {
   }
 };
 
+RULE.$NG_ACTIONS = function(attrKey, attrsInfo, result) {
+  // onAction HTML attributes
+  if((attrKey in html2NgAttributes) && !(html2NgAttributes[attrKey] in attrsInfo.attrs)) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey], 
+      ["Instead of '", attrKey, "' use angular counterpart '" , html2NgAttributes[attrKey], "'"].join(''), result);      
+  }
+};
+
+
 // Miscellaneous rules that requires whole attribute iterations
 RULE.MISC = function(attrsInfo, result) {
-  var iterativeRules = ['$EMPTY_NG', '$NG_ATTR'];
+  var iterativeRules = ['$EMPTY_NG', '$NG_ATTR', '$NG_ACTIONS'];
   _.each(attrsInfo.attrKeys, function(key) {
     _.each(iterativeRules, function(property) {
       RULE[property](key, attrsInfo, result);

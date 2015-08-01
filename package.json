@@ -14,6 +14,7 @@
     "url": "https://github.com/princejwesley/ng-attr-hint.git"
   },
   "dependencies": {
+    "fast-levenshtein": "^1.0.6",
     "htmlparser2": "~3.8.3",
     "lodash": "~3.10.0",
     "q": "^1.4.1",
