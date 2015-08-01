@@ -84,8 +84,6 @@ RULE.$INTERSECTIONS = function(attrsInfo, tagList, msg, result) {
   });
 };
 
-Object.defineProperty(RULE, '$INTERSECTIONS', { enumerable: false });
-
 RULE.MUTUALLY_EXCLUSIVES = function(attrsInfo, result) {
   RULE.$INTERSECTIONS(attrsInfo, mutuallyExclusives, 'Mutually exclusive directives ', result);
 };
@@ -203,8 +201,6 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   }
 };
 
-Object.defineProperty(RULE, '$NG_OPEN_EVEN_ODD', { enumerable: false });
-
 RULE.NG_OPEN_EVEN = function(attrsInfo, result) {
   RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ngClassEven', result);
 };
@@ -213,21 +209,63 @@ RULE.NG_OPEN_ODD = function(attrsInfo, result) {
   RULE.$NG_OPEN_EVEN_ODD(attrsInfo, 'ngClassOdd', result);
 };
 
+RULE.NG_HREF = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  if (!(('ngHref' in attrs) || ('href' in attrs))) return;
 
-RULE.EMPTY_NG = function(attrsInfo, result) {
-  _.each(attrsInfo.attrKeys, function(key) {
-    // empty ng attributes
-    if (_.isEmpty(attrsInfo.attrs[key]) &&
-      _.startsWith(key, 'ng') &&
-      emptyAttributes.indexOf(key) === -1 &&
-      attrsInfo.settings.ignoreAttributes.indexOf(key) === -1) {
-      pushResults(attrsInfo.attributes.__loc__, 'warning', [key], 'Empty attribute ' + key, result);
+  var attr = ('ngHref' in attrs) ? 'ngHref' : 'href';
+  var attrValue = _.trim(attrs[attr]);
+
+  if(attrValue.length !== 0 && ('ngClick' in attrs)) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngClick', attr],
+      "On Click, href should be emtpty to prevent page reload", result);
+  }
+
+  if(attrsInfo.tagName !== 'a') {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [attr],
+      ["Expected href inside <a> tag but got <'", attrsInfo.tagName, "'>"].join(''), result);    
+  }
+};
+
+
+RULE.$EMPTY_NG = function(attrKey, attrsInfo, result) {
+  // empty ng attributes
+  if (_.isEmpty(attrsInfo.attrs[attrKey]) &&
+    _.startsWith(attrKey, 'ng') &&
+    emptyAttributes.indexOf(attrKey) === -1 &&
+    attrsInfo.settings.ignoreAttributes.indexOf(attrKey) === -1) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey], 'Empty attribute ' + attrKey, result);
+  }
+};
+
+RULE.$NG_ATTR = function(attrKey, attrsInfo, result) {
+  // ng-attr- attributes
+  if(_.startsWith(attrKey, 'ngAttr')) {
+    var attr = attrKey.replace('ngAttr', '').toLowerCase();
+    if(attr in attrsInfo.attributes) {
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey, attr], 'Complementary ng-attr-* attribute ' + attrKey, result);      
     }
-  });
+  }
+};
 
+// Miscellaneous rules that requires whole attribute iterations
+RULE.MISC = function(attrsInfo, result) {
+  var iterativeRules = ['$EMPTY_NG', '$NG_ATTR'];
+  _.each(attrsInfo.attrKeys, function(key) {
+    _.each(iterativeRules, function(property) {
+      RULE[property](key, attrsInfo, result);
+    });
+  });
 };
 
 // rule ends
+
+// Non enumerable properties
+_.each(_.keys(RULE), function(rule) {
+  if(_.startsWith(rule, '$')) {
+    Object.defineProperty(RULE, rule, { enumerable: false });
+  }
+});
 
 var RULES = _.keys(RULE);
 
@@ -341,6 +379,7 @@ module.exports = function(options, callback) {
   if (!_.isArray(settings.files))
     return failure2(new Error('files property takes an array of filenames'));
 
+  // TODO: Ignore rule should be handled by rule number
   if (typeof settings.ignoreAttributes === 'string') settings.ignoreAttributes = [settings.ignoreAttributes];
   else if (!settings.ignoreAttributes) settings.ignoreAttributes = [];
 
