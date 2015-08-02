@@ -106,7 +106,12 @@ function directiveNormalize(name) {
   return camelCase(name.replace(PREFIX_REGEXP, ''));
 }
 
-// helper
+var DENORMALIZE_REGEX = /([a-z]+)([A-Z])/g;
+function denormalize(camel) {
+  return camel.replace(DENORMALIZE_REGEX, function(m, lhs, rhs) {
+    return [lhs, rhs.toLowerCase()].join('-'); 
+  });
+}
 
 function pushResults(location, type, attr, message, result) {
   var loc = location.split(':');
@@ -119,6 +124,33 @@ function pushResults(location, type, attr, message, result) {
   });
 }
 
+// threhold value for typo suggesion
+var SIMILARITY_THRESHOLD = 3;
+var SIMILARITY_LENGTH_THRESHOLD = 3;
+var SIMILARITY_LEVEL_THRESHOLD = 3/4;
+
+// similar string
+function similar(lhs, rhs) {
+  if(Math.abs(lhs.length - rhs.length) > SIMILARITY_LENGTH_THRESHOLD) return;
+  var map = _.reduce(lhs.split(''), function(m, c) {
+    m[c] = true;
+    return m;
+  }, {});
+
+  var cmn = _.reduce(rhs.split(''), function(m, c) {
+    return m + !!map[c];
+  }, 0);
+
+  return (rhs.length * SIMILARITY_LEVEL_THRESHOLD) < cmn;
+}
+
+// typo suggession
+function suggesion(name) {
+  var ngs = ngAttributes;
+  return _.filter(ngs, function(ng) {
+    return similar(name, ng) && levenshtein.get(name, ng) <= SIMILARITY_THRESHOLD;
+  });
+}
 
 // rules
 
@@ -316,10 +348,23 @@ RULE.$NG_ACTIONS = function(attrKey, attrsInfo, result) {
   }
 };
 
+RULE.$TYPO_SUGGESTION = function(attrKey, attrsInfo, result) {
+  if(_.startsWith(attrKey, 'ng')) {
+    var name = denormalize(attrKey);
+    if(ngAttributes.indexOf(name) === -1) {
+      var maybes = suggesion(name);
+      if(maybes.length !== 0) {
+        pushResults(attrsInfo.attributes.__loc__, 'info', [name], 
+          ["Custom directive '", name, "'? Did you mean '" , maybes.join('/'), "'?"].join(''), result);
+      }
+    }
+  }
+};
+
 
 // Miscellaneous rules that requires whole attribute iterations
 RULE.MISC = function(attrsInfo, result) {
-  var iterativeRules = ['$EMPTY_NG', '$NG_ATTR', '$NG_ACTIONS'];
+  var iterativeRules = ['$EMPTY_NG', '$NG_ATTR', '$NG_ACTIONS', '$TYPO_SUGGESTION'];
   _.each(attrsInfo.attrKeys, function(key) {
     _.each(iterativeRules, function(property) {
       RULE[property](key, attrsInfo, result);
