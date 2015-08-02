@@ -47,7 +47,6 @@ ngAttrHint({
 [./sample.html:12] [warning] (ngBindHtmlUnsafe) Deprecated directive 'ngBindHtmlUnsafe'. Use 'ng-bind-html' instead
 [./sample.html:14] [warning] (onchange,ngChange) Complementary directives. Got: onchange, ngChange
 [./sample.html:15] [warning] (onchange) Instead of 'onchange' use angular counterpart 'ngChange'
-[./sample.html:18] [warning] (href) Expected href inside <a> tag but got <'div'>
 [./sample.html:28] [warning] (ngOptions) Do not use select as and track by in the same expression. They are not 
 designed to work together.
 

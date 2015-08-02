@@ -313,11 +313,6 @@ RULE.NG_HREF = function(attrsInfo, result) {
     pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngClick', attr],
       "On Click, href should be emtpty to prevent page reload", result);
   }
-
-  if(attrsInfo.tagName !== 'a') {
-    pushResults(attrsInfo.attributes.__loc__, 'warning', [attr],
-      ["Expected href inside <a> tag but got <'", attrsInfo.tagName, "'>"].join(''), result);    
-  }
 };
 
 
