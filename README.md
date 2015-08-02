@@ -19,14 +19,20 @@ Install from npm
 		files: ['./angular-directive.html']
 	}, function(err, res) {
 		if(err) console.error(err);
-		else console.log(res)
+		else  {
+			lint.format(data).forEach(function(o) {
+				console.log(o)
+			});
+		}
 	});
 
 	// promise
 	ngAttrHint({
 		files: ['./angular-directive.html']
 	}).then(function(data) {
-		console.log(data)
+		lint.format(data).forEach(function(o) {
+			console.log(o)
+		});
 	}, function(err) {
 		console.error(err)
 	});
@@ -40,8 +46,6 @@ Install from npm
 		files: [],
 		// file encoding
 		fileEncoding: 'utf8',
-		// Attributes to ignore empty attribute warning
-		ignoreAttributes: []
 	}
 ```
 ###Integration

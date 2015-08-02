@@ -70,7 +70,7 @@ var deprecatedAttributes = {
 
 //denormalized form
 var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bindhtml', 'ng-bindtemplate', 'ng-blur', 'ng-change', 'ng-checked',
-  'ng-class', 'ng-classeven', 'ng-classodd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
+  'ng-class', 'ng-class-even', 'ng-class-odd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
   'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
   'ng-focus', 'ng-form', 'ng-hide', 'ng-hint', 'ng-hint-exclude', 'ng-hint-include', 'ng-href', 'ng-if',
   'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength','ng-minlength',
@@ -171,7 +171,7 @@ RULE.MUTUALLY_EXCLUSIVES = function(attrsInfo, result) {
 };
 
 RULE.COMPLEMENTARY_TAGS = function(attrsInfo, result) {
-  RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives, Use ng-* attribute. Got: ', result);
+  RULE.$INTERSECTIONS(attrsInfo, complementaryTags, 'Complementary directives. Got: ', result);
 };
 
 RULE.DEPRECATED = function(attrsInfo, result) {
@@ -179,7 +179,7 @@ RULE.DEPRECATED = function(attrsInfo, result) {
   _.each(_.keys(deprecatedAttributes), function(deprecate) {
     if(deprecate in attrs) {
       pushResults(attrsInfo.attributes.__loc__, 'warning', [deprecate], 
-        ["Deprecated directive '", deprecate, "'. Use '", deprecatedAttributes[deprecate] ,"'"].join(''), result);      
+        ["Deprecated directive '", deprecate, "'. Use '", deprecatedAttributes[deprecate] ,"' instead"].join(''), result);      
     }
   });
 };
@@ -324,8 +324,7 @@ RULE.$EMPTY_NG = function(attrKey, attrsInfo, result) {
   // empty ng attributes
   if (_.isEmpty(attrsInfo.attrs[attrKey]) &&
     _.startsWith(attrKey, 'ng') &&
-    emptyAttributes.indexOf(attrKey) === -1 &&
-    attrsInfo.settings.ignoreAttributes.indexOf(attrKey) === -1) {
+    emptyAttributes.indexOf(attrKey) === -1) {
     pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey], 'Empty attribute ' + attrKey, result);
   }
 };
@@ -335,7 +334,8 @@ RULE.$NG_ATTR = function(attrKey, attrsInfo, result) {
   if(_.startsWith(attrKey, 'ngAttr')) {
     var attr = attrKey.replace('ngAttr', '').toLowerCase();
     if(attr in attrsInfo.attributes) {
-      pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey, attr], 'Complementary ng-attr-* attribute ' + attrKey, result);      
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey, attr], 
+        ["Complementary directives. Got: ", [attrKey, attr].join(', ')].join(''), result);      
     }
   }
 };
@@ -355,7 +355,7 @@ RULE.$TYPO_SUGGESTION = function(attrKey, attrsInfo, result) {
       var maybes = suggesion(name);
       if(maybes.length !== 0) {
         pushResults(attrsInfo.attributes.__loc__, 'info', [name], 
-          ["Custom directive '", name, "'? Did you mean '" , maybes.join('/'), "'?"].join(''), result);
+          ["Custom directive '", name, "' or misspelled? Did you mean '" , maybes.join('/'), "'?"].join(''), result);
       }
     }
   }
@@ -494,8 +494,6 @@ module.exports = function(options, callback) {
     return failure2(new Error('files property takes an array of filenames'));
 
   // TODO: Ignore rule should be handled by rule number
-  if (typeof settings.ignoreAttributes === 'string') settings.ignoreAttributes = [settings.ignoreAttributes];
-  else if (!settings.ignoreAttributes) settings.ignoreAttributes = [];
 
   var streams = _.map(settings.files, function(filename) {
     var fc = fileContent(filename);
@@ -529,4 +527,14 @@ module.exports = function(options, callback) {
     result.then(deferred.resolve, failure);
   }
   return deferred.promise;
+};
+
+module.exports.format = function(result) {
+  if(!_.isArray(result) || result.length === 0 || 
+    _.xor(_.keys(result[0]), ['file', 'line', 'type', 'attrs', 'message']).length !== 0 ) return [];
+
+  return _.map(result, function(row) {
+    return ["[", row.file, ":", row.line, "] [", row.type, "] (", row.attrs, ") ", row.message].join('');
+  });
+
 };
