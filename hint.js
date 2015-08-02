@@ -11,6 +11,7 @@ var fs = require('fs');
 var htmlParser = require('htmlparser2');
 var through2 = require('through2');
 var levenshtein = require('fast-levenshtein');
+var glob = require('glob');
 
 var mutuallyExclusives = [
   ['ngShow', 'ngHide'],
@@ -495,7 +496,15 @@ module.exports = function(options, callback) {
 
   // TODO: Ignore rule should be handled by rule number
 
-  var streams = _.map(settings.files, function(filename) {
+  var files = _(settings.files)
+    .map(function(pattern) {
+      return glob.sync(pattern); 
+    })
+    .flatten()
+    .uniq()
+    .value();
+
+  var streams = _.map(files, function(filename) {
     var fc = fileContent(filename);
     var stream = fs.createReadStream(filename, {
         encoding: settings.fileEncoding || 'utf8'
