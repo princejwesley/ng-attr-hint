@@ -70,7 +70,7 @@ ngRepeat, as seen in the demo below. Besides this case, you should use controlle
 ```
 
 ### Build
-[Sample Gulp Task](https://gist.github.com/princejwesley/679f092fd1f2ac2ad21c.js)
+[Gulp task](https://gist.github.com/princejwesley/679f092fd1f2ac2ad21c)
 
 Grunt - TODO
 
