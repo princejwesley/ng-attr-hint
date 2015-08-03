@@ -1,8 +1,8 @@
 {
   "name": "ng-attr-hint",
-  "version": "0.2.3",
+  "version": "0.2.5",
   "author": "prince john wesley <princejohnwesley@gmail.com>",
-  "description": "A tiny node plugin for static angular directive hints",
+  "description": "A tiny, static linting tool for angular ng-module directives.",
   "license": "MIT",
   "main": "hint.js",
   "bugs": {
@@ -23,6 +23,10 @@
   },
   "keywords": [
     "angular-hint",
-    "angular-directive"
+    "angular-directive",
+    "ng",
+    "ng-module",
+    "static analysis",
+    "lint tool"
   ]
 }
