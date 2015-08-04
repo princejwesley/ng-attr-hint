@@ -68,6 +68,32 @@ ngRepeat, as seen in the demo below. Besides this case, you should use controlle
 
 ```
 
+### API
+### function format(hints, formatPattern)
+> format the hint object to array of strings
+
+Parameters:
+```
+hints
+  Output of ngAttrHint (An array of hint objects)
+formatPattern
+  Optional Paramater. formatPattern, if provided, will be used for formatting.
+  Use '{field}' to interpolate hint object.
+  Default pattern : `[{file}:{line}] [{type}] ({attrs}) {message}`
+```
+`ngAttrHint` object format: 
+
+``` javascript
+{
+  file: string,
+  line: number,
+  type: string,
+  attrs: [string],
+  message: string
+}
+
+```
+
 ### Build
 [Gulp task](https://gist.github.com/princejwesley/679f092fd1f2ac2ad21c)
 

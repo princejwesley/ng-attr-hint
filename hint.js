@@ -12,6 +12,7 @@ var htmlParser = require('htmlparser2');
 var through2 = require('through2');
 var levenshtein = require('fast-levenshtein');
 var glob = require('glob');
+var formatter = require('extractjs')();
 
 var mutuallyExclusives = [
   ['ngShow', 'ngHide'],
@@ -474,6 +475,8 @@ function toDataPromise(stream, transform) {
   return deferred.promise;
 }
 
+var defaultFormat = formatter('[{file}:{line}] [{type}] ({attrs}) {message}');
+
 module.exports = function(options, callback) {
   var settings = _.clone(options, true);
   var hasCallback = typeof callback === 'function';
@@ -533,12 +536,12 @@ module.exports = function(options, callback) {
   return deferred.promise;
 };
 
-module.exports.format = function(result) {
+module.exports.format = function(result, formatPattern) {
   if(!_.isArray(result) || result.length === 0 || 
     _.xor(_.keys(result[0]), ['file', 'line', 'type', 'attrs', 'message']).length !== 0 ) return [];
 
-  return _.map(result, function(row) {
-    return ["[", row.file, ":", row.line, "] [", row.type, "] (", row.attrs, ") ", row.message].join('');
-  });
+  var outputFormat = formatPattern ? formatter(formatPattern) : defaultFormat;
+
+  return _.map(result, outputFormat.interpolate);
 
 };
