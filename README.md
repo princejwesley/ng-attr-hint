@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/ng-attr-hint.svg)](http://badge.fury.io/js/ng-attr-hint) ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-A Static linting tool for angular ng-module directives.
+A static linting tool for angular ng directives.
 
 
 ###Usage
@@ -45,6 +45,22 @@ ngAttrHint({
 
 
 ### API
+### function(options, callback)
+> Constructor which takes options and an optional callback. if callback is not provided, function will return a promise instance.
+
+Parameters:
+```
+options
+  {
+    files:[glob string]
+  }
+
+callback
+  Optional function which will be used to return the array of hint object.
+
+```
+
+
 ### function format(hints, formatPattern)
 > format the hint object to array of strings
 
