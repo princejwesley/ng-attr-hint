@@ -48,7 +48,8 @@ var aliasTags = [
   ['pattern', 'ngPattern'],
 ];
 
-var emptyAttributes = ['ngCloak', 'ngTransclude'];
+// ngSwipeDisableMouse can be empty
+var emptyAttributes = ['ngCloak', 'ngTransclude', 'ngSwipeDisableMouse'];
 
 var html2NgAttributes = {
   'onchange': 'ngChange',
@@ -71,6 +72,7 @@ var deprecatedAttributes = {
 };
 
 //denormalized form
+//ngTouch/ngRoute module directives included
 var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bind-html', 'ng-bind-template', 'ng-blur', 'ng-change', 'ng-checked',
   'ng-class', 'ng-class-even', 'ng-class-odd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
   'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
@@ -79,7 +81,8 @@ var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bind-html', 'ng-bind-template', 'n
   'ng-model', 'ng-model-options', 'ng-mousedown', 'ng-mouseenter', 'ng-mouseleave', 'ng-mousemove',
   'ng-mouseover', 'ng-mouseup', 'ng-non-bindable', 'ng-open', 'ng-options', 'ng-paste', 'ng-pattern',
   'ng-pluralize', 'ng-pristine', 'ng-readonly', 'ng-repeat', 'ng-repeat-start', 'ng-repeat-end',
-  'ng-required', 'ng-selected', 'ng-show', 'ng-src', 'ng-srcset', 'ng-style', 'ng-submit', 'ng-switch',
+  'ng-required', 'ng-selected', 'ng-show', 'ng-src', 'ng-srcset', 'ng-style', 'ng-submit',
+  'ng-swipe-disable-mouse', 'ng-swipe-left', 'ng-swipe-right', 'ng-switch',
   'ng-switch-default', 'ng-switch-when', 'ng-transclude', 'ng-true-value', 'ng-trim', 'ng-false-value',
   'ng-value', 'ng-valid', 'ng-view',
 ];
@@ -396,6 +399,19 @@ RULE.MISC = function(attrsInfo, result) {
       RULE[property](key, attrsInfo, result);
     });
   });
+};
+
+
+// ngTouch module rule
+
+RULE.DISABLE_MOUSE_ON_SWIPE = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  if (!('ngSwipeDisableMouse' in attrs)) return;
+
+  if(!(('ngSwipeLeft' in attrs) || ('ngSwipeRight' in attrs))) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngSwipeDisableMouse'],
+      "ng-switch-disable-mouse should be used with ng-swipe-left or ng-swipe-right", result);
+  }
 };
 
 // rule ends

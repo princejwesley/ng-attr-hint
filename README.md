@@ -2,13 +2,14 @@
 
 [![npm version](https://badge.fury.io/js/ng-attr-hint.svg)](http://badge.fury.io/js/ng-attr-hint) ![license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-A tiny, static linting tool for angular ng-module directives.
+A Static linting tool for angular ng-module directives.
+
 
 ###Usage
 
 Install from npm
 
-> npm install ng-attr-hint
+> npm install --save ng-attr-hint
 
 ```javascript
 
