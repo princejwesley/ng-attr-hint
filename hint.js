@@ -71,13 +71,13 @@ var deprecatedAttributes = {
 };
 
 //denormalized form
-var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bindhtml', 'ng-bindtemplate', 'ng-blur', 'ng-change', 'ng-checked',
+var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bind-html', 'ng-bind-template', 'ng-blur', 'ng-change', 'ng-checked',
   'ng-class', 'ng-class-even', 'ng-class-odd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
   'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
   'ng-focus', 'ng-form', 'ng-hide', 'ng-hint', 'ng-hint-exclude', 'ng-hint-include', 'ng-href', 'ng-if',
   'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength','ng-minlength',
   'ng-model', 'ng-model-options', 'ng-mousedown', 'ng-mouseenter', 'ng-mouseleave', 'ng-mousemove',
-  'ng-mouseover', 'ng-mouseup', 'ng-nonbindable', 'ng-open', 'ng-options', 'ng-paste', 'ng-pattern',
+  'ng-mouseover', 'ng-mouseup', 'ng-non-bindable', 'ng-open', 'ng-options', 'ng-paste', 'ng-pattern',
   'ng-pluralize', 'ng-pristine', 'ng-readonly', 'ng-repeat', 'ng-repeat-start', 'ng-repeat-end',
   'ng-required', 'ng-selected', 'ng-show', 'ng-src', 'ng-srcset', 'ng-style', 'ng-submit', 'ng-switch',
   'ng-switch-default', 'ng-switch-when', 'ng-transclude', 'ng-true-value', 'ng-trim', 'ng-false-value',
