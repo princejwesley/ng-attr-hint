@@ -154,6 +154,10 @@ function suggesion(name) {
   });
 }
 
+function isLegacyAttribute(attr) {
+  return !!attr.match(/^x-|[_:]/);
+}
+
 // rules
 
 var RULE = {};
@@ -316,6 +320,31 @@ RULE.NG_HREF = function(attrsInfo, result) {
   }
 };
 
+RULE.LEGACY_ATTRIBUTE_NAME = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  var map = attrsInfo.attrMap;
+
+  // legacy attribute usage like x- prefix, _ and : usage
+  _(attrs)
+    .keys()
+    .filter(function(attr) {
+      return isLegacyAttribute(map[attr]);
+    })
+    .each(function(attr) {
+      var msg = formatter(
+          ['Prefer using the dash-delimited format (e.g. {normalized} for {attr}).',
+            'If you want to use an HTML validating tool, you can instead use the data-prefixed version (e.g. data-{normalized} for {attr}).',
+            'The other forms shown above are accepted for legacy reasons but we advise you to avoid them'
+          ].join(''))
+        .interpolate({
+          normalized: denormalize(attr),
+          attr: attr
+        });
+
+      pushResults(attrsInfo.attributes.__loc__, 'info', [attr], msg, result);
+    })
+    .value();
+};
 
 RULE.$EMPTY_NG = function(attrKey, attrsInfo, result) {
   // empty ng attributes
@@ -398,7 +427,8 @@ var parse = function(settings, content) {
   var result = [];
   var deferred = Q.defer();
   var attrs = {},
-    dups = {};
+    dups = {},
+    attrMap = {};
   var tree = {};
   var root = tree;
   var p = new htmlParser.Parser({
@@ -415,6 +445,7 @@ var parse = function(settings, content) {
         tagName: name,
         // normalized
         attrs: attrs,
+        attrMap: attrMap,
         // original
         attributes: attributes,
         dups: dups,
@@ -429,6 +460,7 @@ var parse = function(settings, content) {
 
       attrs = {};
       dups = {};
+      attrMap = {};
     },
     onclosetag: function(name) {
       if(root.parent) root = root.parent;
@@ -437,6 +469,8 @@ var parse = function(settings, content) {
       if(name === '__loc__') return;
 
       var normalizedName = directiveNormalize(name);
+      // normalized -> denormalized
+      attrMap[normalizedName] = name;
 
       if(normalizedName in attrs) dups[normalizedName] = value;
       else attrs[normalizedName] = value;
