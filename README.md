@@ -5,7 +5,7 @@
 A static linting tool for angular ng directives.
 
 
-###Usage
+### Usage
 
 Install from npm
 

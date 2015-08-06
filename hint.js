@@ -38,6 +38,7 @@ var complementaryTags = [
   ['onmouseover', 'ngMouseover'],
   ['onsubmit', 'ngSubmit'],
   ['ondblclick', 'ngDblclick'],
+  ['multiple', 'ngMessagesMultiple'],
 ];
 
 var aliasTags = [
@@ -49,7 +50,7 @@ var aliasTags = [
 ];
 
 // ngSwipeDisableMouse can be empty
-var emptyAttributes = ['ngCloak', 'ngTransclude', 'ngSwipeDisableMouse'];
+var emptyAttributes = ['ngCloak', 'ngTransclude', 'ngSwipeDisableMouse', 'ngMessagesMultiple'];
 
 var html2NgAttributes = {
   'onchange': 'ngChange',
@@ -72,12 +73,13 @@ var deprecatedAttributes = {
 };
 
 //denormalized form
-//ngTouch/ngRoute module directives included
+// ng/ngTouch/ngRoute/ngMessage/ module directives included
 var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bind-html', 'ng-bind-template', 'ng-blur', 'ng-change', 'ng-checked',
   'ng-class', 'ng-class-even', 'ng-class-odd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
   'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
   'ng-focus', 'ng-form', 'ng-hide', 'ng-hint', 'ng-hint-exclude', 'ng-hint-include', 'ng-href', 'ng-if',
-  'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength','ng-minlength',
+  'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength',
+  'ng-message', 'ng-message-exp', 'ng-messages', 'ng-messages-include', 'ng-messages-multiple', 'ng-minlength',
   'ng-model', 'ng-model-options', 'ng-mousedown', 'ng-mouseenter', 'ng-mouseleave', 'ng-mousemove',
   'ng-mouseover', 'ng-mouseup', 'ng-non-bindable', 'ng-open', 'ng-options', 'ng-paste', 'ng-pattern',
   'ng-pluralize', 'ng-pristine', 'ng-readonly', 'ng-repeat', 'ng-repeat-start', 'ng-repeat-end',
@@ -284,7 +286,6 @@ RULE.$NG_OPEN_EVEN_ODD = function(attrsInfo, attrName, result) {
   var attrs = attrsInfo.attrs;
   if (!(attrName in attrs)) return;
 
-  var value = attrs[attrName] || '';
   var node = attrsInfo.node;
   var hasNgRepeat = false;
 
@@ -335,12 +336,12 @@ RULE.LEGACY_ATTRIBUTE_NAME = function(attrsInfo, result) {
     })
     .each(function(attr) {
       var msg = formatter(
-          ['Prefer using the dash-delimited format (e.g. {normalized} for {attr}).',
-            'If you want to use an HTML validating tool, you can instead use the data-prefixed version (e.g. data-{normalized} for {attr}).',
+          ['Prefer using the dash-delimited format (e.g. {denormalized} for {attr}).',
+            'If you want to use an HTML validating tool, you can instead use the data-prefixed version (e.g. data-{denormalized} for {attr}).',
             'The other forms shown above are accepted for legacy reasons but we advise you to avoid them'
           ].join(''))
         .interpolate({
-          normalized: denormalize(attr),
+          denormalized: denormalize(attr),
           attr: attr
         });
 
@@ -390,6 +391,74 @@ RULE.$TYPO_SUGGESTION = function(attrKey, attrsInfo, result) {
   }
 };
 
+// ngTouch module rule
+RULE.DISABLE_MOUSE_ON_SWIPE = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  if (!('ngSwipeDisableMouse' in attrs)) return;
+
+  if(!(('ngSwipeLeft' in attrs) || ('ngSwipeRight' in attrs))) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngSwipeDisableMouse'],
+      "ng-switch-disable-mouse should be used with ng-swipe-left or ng-swipe-right", result);
+  }
+};
+
+//ngMessage module rule
+RULE.$HAS_PARENT = function(attrsInfo, directiveName, parentName, message, result) {
+  var attrs = attrsInfo.attrs;
+  if (!((directiveName in attrs) || attrsInfo.node.data.name === denormalize(directiveName))) return;
+
+  var node = attrsInfo.node.parent;
+  var parent = false;
+  var denormalized = denormalize(parentName);
+
+  while(node && node.data) {
+    if((parentName in node.data.attrs) || (denormalized === node.data.name)) {
+      parent = true;
+      break;
+    }
+    node = node.parent;
+  }
+
+  if(!parent) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [directiveName],
+      message, result);
+  }
+};
+
+_.each(['ngMessage', 'ngMessageExp', 'ngMessagesInclude'], function(directive) {
+  var denormalized = denormalize(directive);
+  var ruleName = denormalized.replace('-', '_').toUpperCase();
+  RULE[ruleName + '_RULE'] = function(attrsInfo, result) {
+    RULE.$HAS_PARENT(attrsInfo, directive, 'ngMessages', denormalized + " directive should be inside ng-messages", result);
+  };
+});
+
+
+RULE.NG_MESSAGE = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  if (attrsInfo.node.data && attrsInfo.node.data.name === 'ng-message') {
+    var hasWhen = 'when' in attrs;
+    var hasWhenExp = 'whenExp' in attrs;
+    var hasBoth = hasWhen & hasWhenExp;
+    var hasOne = hasWhen ^ hasWhenExp;
+    if(hasBoth || !hasOne) {
+      pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngMessage'],
+        'Use exactly one conditional attribute(when or when-exp) inside <ng-message>', result);
+    }
+  }
+};
+
+RULE.NG_MESSAGES_MULTIPLE = function(attrsInfo, result) {
+  var attrs = attrsInfo.attrs;
+  if (!('ngMessagesMultiple' in attrs)) return;
+
+  if(attrsInfo.node.data.name !== 'ng-messages' && !('ngMessages' in attrs)) {
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngMessagesMultiple'],
+      'Use ng-messages-multiple with ng-messages', result);
+  }
+};
+
+
 
 // Miscellaneous rules that requires whole attribute iterations
 RULE.MISC = function(attrsInfo, result) {
@@ -399,19 +468,6 @@ RULE.MISC = function(attrsInfo, result) {
       RULE[property](key, attrsInfo, result);
     });
   });
-};
-
-
-// ngTouch module rule
-
-RULE.DISABLE_MOUSE_ON_SWIPE = function(attrsInfo, result) {
-  var attrs = attrsInfo.attrs;
-  if (!('ngSwipeDisableMouse' in attrs)) return;
-
-  if(!(('ngSwipeLeft' in attrs) || ('ngSwipeRight' in attrs))) {
-    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngSwipeDisableMouse'],
-      "ng-switch-disable-mouse should be used with ng-swipe-left or ng-swipe-right", result);
-  }
 };
 
 // rule ends
