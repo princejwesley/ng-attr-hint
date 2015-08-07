@@ -220,10 +220,27 @@ RULE.NG_TRIM = function(attrsInfo, result) {
 
 RULE.NG_INIT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
-  if (('ngRepeat' in attrs) || !('ngInit' in attrs)) return;
+  if(!('ngInit' in attrs)) return;
+
+  var value = attrs.ngInit, match = value.match(/[^=]+=([^|]+)\|/);
+  // when assignment(=) & filter(|) together
+  if(match && match.length === 2) {
+    // avoid precedence issue
+    var parenthesis = match[1].replace(/[^()]+/g, '');
+    var close = parenthesis.replace(/[(]+/g, '').length;
+    var quoted = match[0].replace(/[^'"]/g,'').length;
+
+    if((parenthesis.length - close) <= close && ( quoted === 0 || (quoted % 2) !== 0)) {
+      pushResults(attrsInfo.attributes.__loc__, 'info', ['ngInit'],
+      'assignment in ngInit along with $filter found. Make sure you have parenthesis for correct precedence',
+      result);
+    }
+  }
+
+  if ('ngRepeat' in attrs) return;
 
   pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngInit'],
-    "The only appropriate use of ngInit is for aliasing special properties of ngRepeat, as seen in the demo below. Besides this case, you should use controllers rather than ngInit to initialize values on a scope.",
+    "The only appropriate use of ngInit is for aliasing special properties of ngRepeat. Otherwise, you should use controllers rather than ngInit to initialize values on a scope.",
     result);
 };
 
@@ -548,6 +565,7 @@ var parse = function(settings, content) {
       else attrs[normalizedName] = value;
     },
     onend: function() {
+      // TODO: do full scan using root tree and perform child node tests of given parent
       deferred.resolve(result);
     }
   }, { lowerCaseTags: true });

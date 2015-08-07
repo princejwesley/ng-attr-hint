@@ -9,7 +9,7 @@ A static linting tool for angular ng directives.
 
 Install from npm
 
-> npm install --save ng-attr-hint
+> npm install ng-attr-hint
 
 ```javascript
 
