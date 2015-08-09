@@ -89,10 +89,11 @@ formatPattern
 ### Build
 [Gulp task](https://gist.github.com/princejwesley/679f092fd1f2ac2ad21c)
 
+[Grunt Plugin](https://github.com/senthilporunan/grunt-ng-attr-hint)
+
 ####TODOs
 
 * Unit tests
-* grunt task
 * demo page
 
 
