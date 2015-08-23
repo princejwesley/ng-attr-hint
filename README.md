@@ -52,7 +52,8 @@ Parameters:
 ```
 options
   {
-    files:[glob string]
+    files: "glob filename-pattern" || [glob filename-pattern],
+		data: "line" || ["lines"]
   }
 
 callback
@@ -73,7 +74,7 @@ formatPattern
   Use '{field}' to interpolate hint object.
   Default pattern : '[{file}:{line}] [{type}] ({attrs}) {message}'
 ```
-`ngAttrHint` object format: 
+`ngAttrHint` object format:
 
 ``` javascript
 {

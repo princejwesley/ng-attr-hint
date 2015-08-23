@@ -13,6 +13,7 @@ var through2 = require('through2');
 var levenshtein = require('fast-levenshtein');
 var glob = require('glob');
 var formatter = require('extractjs')();
+var Readable = require('stream').Readable;
 
 var mutuallyExclusives = [
   ['ngShow', 'ngHide'],
@@ -68,7 +69,7 @@ var html2NgAttributes = {
   'ondblclick': 'ngDblclick',
 };
 
-var deprecatedAttributes = { 
+var deprecatedAttributes = {
   'ngBindHtmlUnsafe' : 'ng-bind-html'
 };
 
@@ -76,7 +77,7 @@ var deprecatedAttributes = {
 // ng/ngTouch/ngRoute/ngMessage/ module directives included
 var ngAttributes = [ 'ng-app', 'ng-bind', 'ng-bind-html', 'ng-bind-template', 'ng-blur', 'ng-change', 'ng-checked',
   'ng-class', 'ng-class-even', 'ng-class-odd', 'ng-click', 'ng-cloak', 'ng-controller', 'ng-copy',
-  'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value', 
+  'ng-csp', 'ng-cut', 'ng-dblclick', 'ng-disabled', 'ng-dirty', 'ng-false-value',
   'ng-focus', 'ng-form', 'ng-hide', 'ng-hint', 'ng-hint-exclude', 'ng-hint-include', 'ng-href', 'ng-if',
   'ng-include', 'ng-init', 'ng-invalid', 'ng-keydown', 'ng-keypress', 'ng-keyup', 'ng-list', 'ng-maxlength',
   'ng-message', 'ng-message-exp', 'ng-messages', 'ng-messages-include', 'ng-messages-multiple', 'ng-minlength',
@@ -116,7 +117,7 @@ function directiveNormalize(name) {
 var DENORMALIZE_REGEX = /([a-z]+)([A-Z])/g;
 function denormalize(camel) {
   return camel.replace(DENORMALIZE_REGEX, function(m, lhs, rhs) {
-    return [lhs, rhs.toLowerCase()].join('-'); 
+    return [lhs, rhs.toLowerCase()].join('-');
   });
 }
 
@@ -189,8 +190,8 @@ RULE.DEPRECATED = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   _.each(_.keys(deprecatedAttributes), function(deprecate) {
     if(deprecate in attrs) {
-      pushResults(attrsInfo.attributes.__loc__, 'warning', [deprecate], 
-        ["Deprecated directive '", deprecate, "'. Use '", deprecatedAttributes[deprecate] ,"' instead"].join(''), result);      
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [deprecate],
+        ["Deprecated directive '", deprecate, "'. Use '", deprecatedAttributes[deprecate] ,"' instead"].join(''), result);
     }
   });
 };
@@ -248,7 +249,7 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   if (!('ngRepeat' in attrs)) return;
 
-  var value = attrs['ngRepeat'], trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
+  var value = attrs.ngRepeat, trimFunValue = value.replace(/\(\s*([\S]*)\s*\)/g, '($1)');
 
   if (trimFunValue.match(/\strack\s+by\s+(?:[\S]+)\s+(?:[\S]+)/)) {
     pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'], "track by must always be the last expression", result);
@@ -264,7 +265,7 @@ RULE.NG_REPEAT = function(attrsInfo, result) {
     var aliasAs = match[3];
 
     if(!(match = m1.match(/^(?:(\s*[\$\w]+)|\(\s*([\$\w]+)\s*,\s*([\$\w]+)\s*\))$/))) {
-      pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'], 
+      pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngRepeat'],
         ["'_item_' in '_item_ in _collection_' should be an identifier or '(_key_, _value_)' expression, but got '", m1, "'."].join(''), result);
     }
 
@@ -281,12 +282,12 @@ RULE.NG_OPTIONS = function(attrsInfo, result) {
   var attrs = attrsInfo.attrs;
   if (!('ngOptions' in attrs)) return;
 
-  var options = attrs['ngOptions'];
+  var options = attrs.ngOptions;
 
   if (!options) return;
 
   if (!options.match(NG_OPTIONS_REGEXP)) {
-    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngOptions'], 
+    pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngOptions'],
       ["Expected expression in form of '_select_ (as _label_)? for (_key_,)?_value_ in _collection_' but got '",
         options, "'. Element: '<", attrsInfo.tagName, ">'"
       ].join(''), result);
@@ -337,7 +338,7 @@ RULE.NG_HREF = function(attrsInfo, result) {
 
   if(attrValue.length !== 0 && ('ngClick' in attrs)) {
     pushResults(attrsInfo.attributes.__loc__, 'warning', ['ngClick', attr],
-      "On Click, href should be emtpty to prevent page reload", result);
+      "On Click, href should be empty to prevent page reload", result);
   }
 };
 
@@ -381,8 +382,8 @@ RULE.$NG_ATTR = function(attrKey, attrsInfo, result) {
   if(_.startsWith(attrKey, 'ngAttr')) {
     var attr = attrKey.replace('ngAttr', '').toLowerCase();
     if(attr in attrsInfo.attributes) {
-      pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey, attr], 
-        ["Complementary directives. Got: ", [attrKey, attr].join(', ')].join(''), result);      
+      pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey, attr],
+        ["Complementary directives. Got: ", [attrKey, attr].join(', ')].join(''), result);
     }
   }
 };
@@ -390,8 +391,8 @@ RULE.$NG_ATTR = function(attrKey, attrsInfo, result) {
 RULE.$NG_ACTIONS = function(attrKey, attrsInfo, result) {
   // onAction HTML attributes
   if((attrKey in html2NgAttributes) && !(html2NgAttributes[attrKey] in attrsInfo.attrs)) {
-    pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey], 
-      ["Instead of '", attrKey, "' use angular counterpart '" , html2NgAttributes[attrKey], "'"].join(''), result);      
+    pushResults(attrsInfo.attributes.__loc__, 'warning', [attrKey],
+      ["Instead of '", attrKey, "' use angular counterpart '" , html2NgAttributes[attrKey], "'"].join(''), result);
   }
 };
 
@@ -401,7 +402,7 @@ RULE.$TYPO_SUGGESTION = function(attrKey, attrsInfo, result) {
     if(ngAttributes.indexOf(name) === -1) {
       var maybes = suggesion(name);
       if(maybes.length !== 0) {
-        pushResults(attrsInfo.attributes.__loc__, 'info', [name], 
+        pushResults(attrsInfo.attributes.__loc__, 'info', [name],
           ["Custom directive '", name, "' or misspelled? Did you mean '" , maybes.join('/'), "'?"].join(''), result);
       }
     }
@@ -545,7 +546,7 @@ var parse = function(settings, content) {
 
       _.each(RULES, function(rule) {
         RULE[rule](attrsInfo, result);
-      })
+      });
 
       attrs = {};
       dups = {};
@@ -609,41 +610,57 @@ module.exports = function(options, callback) {
   var failure2 = hasCallback ? callback : Q.reject;
 
   if (!settings) return failure2(new Error('Empty Settings'));
-  if (!settings.files) return failure2(new Error('Empty files property'));
+  if (!settings.files && !settings.data) return failure2(new Error('Empty files or data property'));
 
   if (typeof settings.files === 'string') settings.files = [settings.files];
+  if (typeof settings.data === 'string') settings.data = [settings.data];
 
-  if (!_.isArray(settings.files))
-    return failure2(new Error('files property takes an array of filenames'));
+  if(settings.data && settings.files)
+    return failure2(new Error('use either data or files property'));
+
+  if (settings.files && !_.isArray(settings.files))
+    return failure2(new Error('files property takes string or an array of filename string'));
+
+  if(settings.data && !_.isArray(settings.data))
+    return failure2(new Error('data property takes string or an array of data string'));
 
   // TODO: Ignore rule should be handled by rule number
-
-  var files = _(settings.files)
-    .map(function(pattern) {
-      return glob.sync(pattern); 
-    })
-    .flatten()
-    .uniq()
-    .value();
-
-  var streams = _.map(files, function(filename) {
-    var fc = fileContent(filename);
-    var stream = fs.createReadStream(filename, {
-        encoding: settings.fileEncoding || 'utf8'
+  var streams, fc;
+  if(settings.files) {
+    var files = _(settings.files)
+      .map(function(pattern) {
+        return glob.sync(pattern);
       })
-      .on('error', failure)
-      .pipe(through2({
-        decodeStrings: false
-      }, function(chunk, encoding, callback) {
-        callback(null, fc(chunk));
-      }));
-    return stream;
-  });
+      .flatten()
+      .uniq()
+      .value();
+
+    streams = _.map(files, function(filename) {
+      fc = fileContent(filename);
+      return fs.createReadStream(filename, {
+          encoding: settings.fileEncoding || 'utf8'
+        })
+        .on('error', failure)
+        .pipe(through2({
+          decodeStrings: false
+        }, function(chunk, encoding, callback) {
+          callback(null, fc(chunk));
+        }));
+    });
+  } else {
+    streams = [new Readable()];
+    streams[0]._read = function() {};
+    fc = fileContent('stream');
+    _.forEach(settings.data, function(content) {
+      streams[0].push(fc(content));
+    });
+    streams[0].push(null);
+  }
 
   var parseSettings = (function(settings) {
     return function(content) {
       return parse(settings, content);
-    }
+    };
   })(settings);
 
   var promises = _.map(streams, function(s) {
@@ -661,7 +678,7 @@ module.exports = function(options, callback) {
 };
 
 module.exports.format = function(result, formatPattern) {
-  if(!_.isArray(result) || result.length === 0 || 
+  if(!_.isArray(result) || result.length === 0 ||
     _.xor(_.keys(result[0]), ['file', 'line', 'type', 'attrs', 'message']).length !== 0 ) return [];
 
   var outputFormat = formatPattern ? formatter(formatPattern) : defaultFormat;
