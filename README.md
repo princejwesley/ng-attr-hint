@@ -53,7 +53,7 @@ Parameters:
 options
   {
     files: "glob filename-pattern" || [glob filename-pattern],
-		data: "line" || ["lines"]
+		data: "content" || ["content"]
   }
 
 callback
