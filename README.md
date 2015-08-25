@@ -53,7 +53,7 @@ Parameters:
 options
   {
     files: "glob filename-pattern" || [glob filename-pattern],
-		data: "content" || ["content"]
+		data: "content"
   }
 
 callback
@@ -87,12 +87,18 @@ formatPattern
 
 ```
 
-### Build
+### Plugins
+
 [Gulp task](https://gist.github.com/princejwesley/679f092fd1f2ac2ad21c)
 
 [Grunt Plugin](https://github.com/senthilporunan/grunt-ng-attr-hint)
 
-####TODOs
+[Atom Package](https://github.com/princejwesley/atom-ng-attr-hint)
+
+![atom-ng-attr-hint](https://gist.githubusercontent.com/princejwesley/c5761274dc710bcd8268/raw/fddb23286ab218db8b2a2921cea64777bf26383c/atom-ng-attr-hint.png)
+
+
+#### TODOs
 
 * Unit tests
 * demo page

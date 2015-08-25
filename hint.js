@@ -613,7 +613,6 @@ module.exports = function(options, callback) {
   if (!settings.files && !settings.data) return failure2(new Error('Empty files or data property'));
 
   if (typeof settings.files === 'string') settings.files = [settings.files];
-  if (typeof settings.data === 'string') settings.data = [settings.data];
 
   if(settings.data && settings.files)
     return failure2(new Error('use either data or files property'));
@@ -621,8 +620,8 @@ module.exports = function(options, callback) {
   if (settings.files && !_.isArray(settings.files))
     return failure2(new Error('files property takes string or an array of filename string'));
 
-  if(settings.data && !_.isArray(settings.data))
-    return failure2(new Error('data property takes string or an array of data string'));
+  if(settings.data && (typeof settings.data !== 'string'))
+    return failure2(new Error('data property takes string'));
 
   // TODO: Ignore rule should be handled by rule number
   var streams, fc;
@@ -650,10 +649,7 @@ module.exports = function(options, callback) {
   } else {
     streams = [new Readable()];
     streams[0]._read = function() {};
-    fc = fileContent('stream');
-    _.forEach(settings.data, function(content) {
-      streams[0].push(fc(content));
-    });
+    streams[0].push(fileContent('stream')(settings.data));
     streams[0].push(null);
   }
 
