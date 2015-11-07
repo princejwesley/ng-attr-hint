@@ -105,6 +105,6 @@ formatPattern
 
 
 ## License
-This plugin is licensed under the [MIT license](https://github.com/princejwesley/ng-attr-hint/blob/master/LICENSE.md).
+This plugin is licensed under the [MIT license](https://github.com/princejwesley/ng-attr-hint/blob/master/LICENSE).
 
 Copyright (c) 2015 [Prince John Wesley](http://www.toolitup.com)
