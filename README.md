@@ -1,6 +1,7 @@
 # ng-attr-hint
 
 [![npm version](https://badge.fury.io/js/ng-attr-hint.svg)](http://badge.fury.io/js/ng-attr-hint) ![license](https://img.shields.io/badge/license-MIT-blue.svg)
+[![npm](https://img.shields.io/npm/dm/ng-attr-hint.svg)](https://www.npmjs.com/package/ng-attr-hint)
 
 A static linting tool for angular ng directives.
 
